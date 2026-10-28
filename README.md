@@ -27,34 +27,24 @@ The executable and DLL are emitted to the same runtime output directory, so the
 Windows loader can find the DLL when starting the executable. The `.lib` import
 library is used at link time.
 
-## Build with Docker
+## Build in a QEMU Windows VM
 
-Linux container (run on a Linux host, or Docker Desktop in Linux containers mode):
+The Windows build runs in a QEMU/KVM virtual machine on a Linux host. A Packer
+template defines the VM: Windows Server 2022 Server Core, Visual Studio 2022 C++
+Build Tools, CMake, and OpenSSH. Git holds that recipe (`qemu/windows/`), not
+the disk image. See [`qemu/README.md`](qemu/README.md) for host setup and
+details.
 
 ```sh
-docker build -f docker/linux/Dockerfile -t cmake-thread-demo:linux .
-docker run --rm cmake-thread-demo:linux
+# one time, on a Windows PC: build the custom ISO (debloated, toolchain embedded)
+#   see qemu/windows/iso-kit/README.md, then copy the ISO to qemu/windows/iso/
+
+# one time (~1-2 h): build the base image from the ISO
+./qemu/windows/build-image.sh
+
+# every build: clean VM -> MSVC build -> run ThreadDemo.exe -> out/windows/
+./qemu/windows/vm.sh build
 ```
-
-Windows container (run Docker Desktop on Windows and switch to Windows
-containers mode):
-
-```powershell
-docker build -f docker/windows/Dockerfile -t cmake-thread-demo:windows .
-docker run --rm cmake-thread-demo:windows
-```
-
-The Windows image installs Visual Studio C++ Build Tools and CMake, so the build
-downloads and image creation can take a while. The sample uses the Windows
-Server Core LTSC 2022 image; Windows container compatibility depends on the host
-Windows version and isolation mode.
-
-Containers share the host OS kernel; an image supplies user-space files and
-programs, not a separate kernel. Windows binaries rely on Windows kernel APIs,
-so a Windows base image alone cannot make them run on a Linux Docker host. The
-Docker daemon must use a Windows kernel to build and run Windows containers.
-Linux containers build Linux binaries, and Windows containers build Windows
-binaries; the two images cannot be interchanged.
 
 ## What to look at
 
